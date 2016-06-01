@@ -293,7 +293,7 @@ void fixup_perms_recursive(struct dentry *dentry, struct limit_search *limit) {
 void drop_recursive(struct dentry *parent) {
 	struct dentry *dentry;
 	list_for_each_entry(dentry, &parent->d_subdirs, d_u.d_child) {
-		if (dentry && dentry->d_inode) {
+		if (dentry->d_inode) {
 			mutex_lock(&dentry->d_inode->i_mutex);
 			get_derived_permission(parent, dentry);
 			fix_derived_permission(dentry->d_inode);
