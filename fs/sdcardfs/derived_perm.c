@@ -299,29 +299,11 @@ void drop_recursive(struct dentry *parent) {
 	spin_lock(&parent->d_lock);
 	list_for_each_entry(dentry, &parent->d_subdirs, d_u.d_child) {
 		if (dentry->d_inode) {
-			if (SDCARDFS_I(parent->d_inode)->top != SDCARDFS_I(dentry->d_inode)->top) {
-				drop_recursive(dentry);
-				d_drop(dentry);
-			}
-		}
-	}
-	spin_unlock(&parent->d_lock);
-}
-
-void fixup_top_recursive(struct dentry *parent) {
-	struct dentry *dentry;
-	struct sdcardfs_inode_info *info;
-	if (!parent->d_inode)
-		return;
-	info = SDCARDFS_I(parent->d_inode);
-	spin_lock(&parent->d_lock);
-	list_for_each_entry(dentry, &parent->d_subdirs, d_u.d_child) {
-		if (dentry->d_inode) {
-			if (SDCARDFS_I(parent->d_inode)->top != SDCARDFS_I(dentry->d_inode)->top) {
-				get_derived_permission(parent, dentry);
-				fixup_tmp_permissions(dentry->d_inode);
-				fixup_top_recursive(dentry);
-			}
+			mutex_lock(&dentry->d_inode->i_mutex);
+			get_derived_permission(parent, dentry);
+			fix_derived_permission(dentry->d_inode);
+			get_derive_permissions_recursive(dentry);
+			mutex_unlock(&dentry->d_inode->i_mutex);
 		}
 	}
 	spin_unlock(&parent->d_lock);
