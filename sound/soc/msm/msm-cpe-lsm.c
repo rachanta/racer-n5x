@@ -938,7 +938,7 @@ static int msm_cpe_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 		if (!session->snd_model_data) {
 			dev_err(rtd->dev, "%s: No memory for sound model\n",
 				__func__);
-			vfree(session->conf_levels);
+			kfree(session->conf_levels);
 			session->conf_levels = NULL;
 			return -ENOMEM;
 		}
@@ -949,9 +949,10 @@ static int msm_cpe_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 			dev_err(rtd->dev,
 				"%s: copy_from_user failed for snd_model\n",
 				__func__);
-			vfree(session->conf_levels);
+
+			kfree(session->conf_levels);
+			kfree(session->snd_model_data);
 			session->conf_levels = NULL;
-			vfree(session->snd_model_data);
 			session->snd_model_data = NULL;
 			return -EFAULT;
 		}
@@ -962,10 +963,11 @@ static int msm_cpe_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 			dev_err(rtd->dev,
 				"%s: shared memory allocation failed, err = %d\n",
 			       __func__, rc);
-			vfree(session->conf_levels);
-			session->conf_levels = NULL;
-			vfree(session->snd_model_data);
+
+			kfree(session->snd_model_data);
+			kfree(session->conf_levels);
 			session->snd_model_data = NULL;
+			session->conf_levels = NULL;
 			return rc;
 		}
 
@@ -977,10 +979,11 @@ static int msm_cpe_lsm_ioctl_shared(struct snd_pcm_substream *substream,
 				"%s: snd_model_reg failed, err = %d\n",
 			       __func__, rc);
 			lsm_ops->lsm_shmem_dealloc(cpe->core_handle, session);
-			vfree(session->conf_levels);
-			session->conf_levels = NULL;
-			vfree(session->snd_model_data);
+
+			kfree(session->snd_model_data);
+			kfree(session->conf_levels);
 			session->snd_model_data = NULL;
+			session->conf_levels = NULL;
 			return rc;
 		}
 
