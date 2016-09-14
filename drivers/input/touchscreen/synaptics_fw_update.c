@@ -2423,7 +2423,7 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 	INIT_DELAYED_WORK(&fwu->fwu_work, synaptics_rmi4_fwu_work);
 #endif
 
-	retval = sysfs_create_bin_file(&rmi4_data->i2c_client->dev.kobj,
+        retval = sysfs_create_bin_file(&rmi4_data->i2c_client->dev.kobj,
 			&dev_attr_data);
 	if (retval < 0) {
 		dev_err(&rmi4_data->i2c_client->dev,
