@@ -1752,6 +1752,7 @@ static ssize_t fwu_sysfs_store_image(struct file *data_file,
 			"Cannot use this without setting imagesize!\n");
 		retval = -EAGAIN;
 		goto store_image_exit;
+
 	}
 
 	if (count > fwu->image_size - fwu->data_pos) {
@@ -1760,13 +1761,6 @@ static ssize_t fwu_sysfs_store_image(struct file *data_file,
 				__func__);
 		retval = -EINVAL;
 		goto store_image_exit;
-	}
-
-	if (count > fwu->image_size - fwu->data_pos) {
-		dev_err(&fwu->rmi4_data->i2c_client->dev,
-				"%s: Not enough space in buffer\n",
-				__func__);
-		return -EINVAL;
 	}
 
 	memcpy((void *)(&fwu->ext_data_source[fwu->data_pos]),
@@ -2423,7 +2417,7 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 	INIT_DELAYED_WORK(&fwu->fwu_work, synaptics_rmi4_fwu_work);
 #endif
 
-        retval = sysfs_create_bin_file(&rmi4_data->i2c_client->dev.kobj,
+	retval = sysfs_create_bin_file(&rmi4_data->i2c_client->dev.kobj,
 			&dev_attr_data);
 	if (retval < 0) {
 		dev_err(&rmi4_data->i2c_client->dev,
