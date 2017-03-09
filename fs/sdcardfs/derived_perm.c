@@ -296,24 +296,7 @@ void fixup_perms_recursive(struct dentry *dentry, struct limit_search *limit) {
 	__fixup_perms_recursive(dentry, limit, 0);
 }
 
-void drop_recursive(struct dentry *parent) {
-	struct dentry *dentry;
-	struct sdcardfs_inode_info *info;
-	if (!parent->d_inode)
-		return;
-	info = SDCARDFS_I(parent->d_inode);
-	spin_lock(&parent->d_lock);
-	list_for_each_entry(dentry, &parent->d_subdirs, d_u.d_child) {
-		if (dentry->d_inode) {
-			mutex_lock(&dentry->d_inode->i_mutex);
-			get_derived_permission(parent, dentry);
-			fix_derived_permission(dentry->d_inode);
-			get_derive_permissions_recursive(dentry);
-			mutex_unlock(&dentry->d_inode->i_mutex);
-		}
-	}
-	spin_unlock(&parent->d_lock);
-}
+
 
 /* main function for updating derived permission */
 inline void update_derived_permission_lock(struct dentry *dentry)
