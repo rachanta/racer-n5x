@@ -57,7 +57,7 @@
  *   - d_count
  *   - d_unhashed()
  *   - d_parent and d_subdirs
- *   - childrens' d_child and d_parent
+ *   - childrens' d_u.d_child and d_parent
  *   - d_u.d_alias, d_inode
  *
  * Ordering:
@@ -364,7 +364,7 @@ static struct dentry *d_kill(struct dentry *dentry, struct dentry *parent)
 	__releases(parent->d_lock)
 	__releases(dentry->d_inode->i_lock)
 {
-	__list_del_entry(&dentry->d_child);
+	__list_del_entry(&dentry->d_u.d_child);
 	/*
 	 * Inform ascending readers that we are no longer attached to the
 	 * dentry tree
@@ -893,7 +893,7 @@ static void shrink_dcache_for_umount_subtree(struct dentry *dentry)
 		/* descend to the first leaf in the current subtree */
 		while (!list_empty(&dentry->d_subdirs))
 			dentry = list_entry(dentry->d_subdirs.next,
-					    struct dentry, d_child);
+					    struct dentry, d_u.d_child);
 
 		/* consume the dentries from this leaf up through its parents
 		 * until we find one with children or run out altogether */
@@ -927,11 +927,11 @@ static void shrink_dcache_for_umount_subtree(struct dentry *dentry)
 
 			if (IS_ROOT(dentry)) {
 				parent = NULL;
-				list_del(&dentry->d_child);
+				list_del(&dentry->d_u.d_child);
 			} else {
 				parent = dentry->d_parent;
 				parent->d_count--;
-				list_del(&dentry->d_child);
+				list_del(&dentry->d_u.d_child);
 			}
 
 			inode = dentry->d_inode;
@@ -955,7 +955,7 @@ static void shrink_dcache_for_umount_subtree(struct dentry *dentry)
 		} while (list_empty(&dentry->d_subdirs));
 
 		dentry = list_entry(dentry->d_subdirs.next,
-				    struct dentry, d_child);
+				    struct dentry, d_u.d_child);
 	}
 }
 
@@ -1019,7 +1019,7 @@ repeat:
 resume:
 	while (next != &this_parent->d_subdirs) {
 		struct list_head *tmp = next;
-		struct dentry *dentry = list_entry(tmp, struct dentry, d_child);
+		struct dentry *dentry = list_entry(tmp, struct dentry, d_u.d_child);
 		next = tmp->next;
 
 		spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
@@ -1053,11 +1053,11 @@ ascend:
 		/* might go back up the wrong parent if we have had a rename. */
 		if (!locked && read_seqretry(&rename_lock, seq))
 			goto rename_retry;
-		next = child->d_child.next;
+		next = child->d_u.d_child.next;
 		while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED)) {
 			if (next == &this_parent->d_subdirs)
 				goto ascend;
-			child = list_entry(next, struct dentry, d_child);
+			child = list_entry(next, struct dentry, d_u.d_child);
 			next = next->next;
 		}
 		rcu_read_unlock();
@@ -1119,7 +1119,7 @@ repeat:
 resume:
 	while (next != &this_parent->d_subdirs) {
 		struct list_head *tmp = next;
-		struct dentry *dentry = list_entry(tmp, struct dentry, d_child);
+		struct dentry *dentry = list_entry(tmp, struct dentry, d_u.d_child);
 		next = tmp->next;
 
 		spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
@@ -1177,11 +1177,11 @@ ascend:
 		/* might go back up the wrong parent if we have had a rename. */
 		if (!locked && read_seqretry(&rename_lock, seq))
 			goto rename_retry;
-		next = child->d_child.next;
+		next = child->d_u.d_child.next;
 		while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED)) {
 			if (next == &this_parent->d_subdirs)
 				goto ascend;
-			child = list_entry(next, struct dentry, d_child);
+			child = list_entry(next, struct dentry, d_u.d_child);
 			next = next->next;
 		}
 		rcu_read_unlock();
@@ -1284,7 +1284,7 @@ struct dentry *__d_alloc(struct super_block *sb, const struct qstr *name)
 	INIT_LIST_HEAD(&dentry->d_lru);
 	INIT_LIST_HEAD(&dentry->d_subdirs);
 	INIT_HLIST_NODE(&dentry->d_u.d_alias);
-	INIT_LIST_HEAD(&dentry->d_child);
+	INIT_LIST_HEAD(&dentry->d_u.d_child);
 	d_set_d_op(dentry, dentry->d_sb->s_d_op);
 
 	this_cpu_inc(nr_dentry);
@@ -1314,7 +1314,7 @@ struct dentry *d_alloc(struct dentry * parent, const struct qstr *name)
 	 */
 	__dget_dlock(parent);
 	dentry->d_parent = parent;
-	list_add(&dentry->d_child, &parent->d_subdirs);
+	list_add(&dentry->d_u.d_child, &parent->d_subdirs);
 	spin_unlock(&parent->d_lock);
 
 	return dentry;
@@ -2024,7 +2024,7 @@ int d_validate(struct dentry *dentry, struct dentry *dparent)
 	struct dentry *child;
 
 	spin_lock(&dparent->d_lock);
-	list_for_each_entry(child, &dparent->d_subdirs, d_child) {
+	list_for_each_entry(child, &dparent->d_subdirs, d_u.d_child) {
 		if (dentry == child) {
 			spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
 			__dget_dlock(dentry);
@@ -2271,8 +2271,8 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 	/* Unhash the target: dput() will then get rid of it */
 	__d_drop(target);
 
-	list_del(&dentry->d_child);
-	list_del(&target->d_child);
+	list_del(&dentry->d_u.d_child);
+	list_del(&target->d_u.d_child);
 
 	/* Switch the names.. */
 	switch_names(dentry, target);
@@ -2282,15 +2282,15 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
 	if (IS_ROOT(dentry)) {
 		dentry->d_parent = target->d_parent;
 		target->d_parent = target;
-		INIT_LIST_HEAD(&target->d_child);
+		INIT_LIST_HEAD(&target->d_u.d_child);
 	} else {
 		swap(dentry->d_parent, target->d_parent);
 
 		/* And add them back to the (new) parent lists */
-		list_add(&target->d_child, &target->d_parent->d_subdirs);
+		list_add(&target->d_u.d_child, &target->d_parent->d_subdirs);
 	}
 
-	list_add(&dentry->d_child, &dentry->d_parent->d_subdirs);
+	list_add(&dentry->d_u.d_child, &dentry->d_parent->d_subdirs);
 
 	write_seqcount_end(&target->d_seq);
 	write_seqcount_end(&dentry->d_seq);
@@ -2397,9 +2397,9 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 	swap(dentry->d_name.hash, anon->d_name.hash);
 
 	dentry->d_parent = dentry;
-	list_del_init(&dentry->d_child);
+	list_del_init(&dentry->d_u.d_child);
 	anon->d_parent = dparent;
-	list_move(&anon->d_child, &dparent->d_subdirs);
+	list_move(&anon->d_u.d_child, &dparent->d_subdirs);
 
 	write_seqcount_end(&dentry->d_seq);
 	write_seqcount_end(&anon->d_seq);
@@ -2938,7 +2938,7 @@ repeat:
 resume:
 	while (next != &this_parent->d_subdirs) {
 		struct list_head *tmp = next;
-		struct dentry *dentry = list_entry(tmp, struct dentry, d_child);
+		struct dentry *dentry = list_entry(tmp, struct dentry, d_u.d_child);
 		next = tmp->next;
 
 		spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
@@ -2975,11 +2975,11 @@ ascend:
 		/* might go back up the wrong parent if we have had a rename. */
 		if (!locked && read_seqretry(&rename_lock, seq))
 			goto rename_retry;
-		next = child->d_child.next;
+		next = child->d_u.d_child.next;
 		while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED)) {
 			if (next == &this_parent->d_subdirs)
 				goto ascend;
-			child = list_entry(next, struct dentry, d_child);
+			child = list_entry(next, struct dentry, d_u.d_child);
 			next = next->next;
 		}
 		rcu_read_unlock();
