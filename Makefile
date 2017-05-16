@@ -380,6 +380,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -std=gnu89 \
 		   -Wno-unused-const-variable \
 		   -Wno-bool-compare \
+                   -Wno-implicit-function-declaration \
 		   -fmodulo-sched -fmodulo-sched-allow-regmoves
 
 KBUILD_AFLAGS_KERNEL :=
