@@ -381,6 +381,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-unused-const-variable \
 		   -Wno-bool-compare \
                    -Wno-implicit-function-declaration \
+                   -Wno-unused-variable \
 		   -fmodulo-sched -fmodulo-sched-allow-regmoves
 
 KBUILD_AFLAGS_KERNEL :=
