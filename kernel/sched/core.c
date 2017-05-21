@@ -154,9 +154,6 @@ const char *task_event_names[] = {"PUT_PREV_TASK", "PICK_NEXT_TASK",
 				  "TASK_WAKE", "TASK_MIGRATE", "TASK_UPDATE",
 				"IRQ_UPDATE"};
 
-ATOMIC_NOTIFIER_HEAD(migration_notifier_head);
-ATOMIC_NOTIFIER_HEAD(load_alert_notifier_head);
-
 #ifdef smp_mb__before_atomic
 void __smp_mb__before_atomic(void)
 {
